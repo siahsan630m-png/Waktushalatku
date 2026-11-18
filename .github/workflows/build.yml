@@ -1,27 +1,46 @@
-  - name: Siapkan proyek (otomatis unzip jika yang diunggah file ZIP)
-    run: |
-      if [ -z "$(find . -maxdepth 3 -name settings.gradle | head -n 1)" ]; then
-        Z=$(ls *.zip | head -n 1)
-        echo "Membuka $Z"
-        mkdir -p _src
-        unzip -q "$Z" -d _src
-      fi
-      S=$(find . -maxdepth 4 -name settings.gradle | head -n 1)
-      echo "PROJECT_DIR=$(dirname "$S")" >> "$GITHUB_ENV"
+name: Build Android APK
 
-  - uses: actions/setup-java@v4
-    with:
-      distribution: temurin
-      java-version: '17'
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
 
-  - uses: gradle/actions/setup-gradle@v4
-    with:
-      gradle-version: '8.9'
+jobs:
+  build:
+    runs-on: ubuntu-latest
 
-  - name: Build APK debug
-    run: gradle -p "$PROJECT_DIR" assembleDebug --stacktrace
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-  - uses: actions/upload-artifact@v4
-    with:
-      name: Sholatku-debug-apk
-      path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/*.apk
+    - name: Siapkan proyek (otomatis unzip jika yang diunggah file ZIP)
+      run: |
+        if [ -f "33Shalatku-Android-Project-v2.zip" ]; then
+          echo "Membuka file ZIP..."
+          unzip "33Shalatku-Android-Project-v2.zip" -d project_src
+        fi
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v4
+      with:
+        gradle-version: '8.5'
+
+    - name: Build APK debug
+      run: |
+        if [ -d "project_src" ]; then
+          cd project_src
+        fi
+        ./gradlew assembleDebug --stacktrace
+
+    - name: Upload APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Sholatku-debug-apk
+        path: "**/build/outputs/apk/debug/*.apk"
+        
